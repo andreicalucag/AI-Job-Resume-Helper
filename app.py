@@ -1,35 +1,83 @@
 import streamlit as st
 import openai
+import fitz  # PyMuPDF
+from docx import Document
 import json
 
-# Sidebar for API key
+# ✅ Streamlit page config
+st.set_page_config(
+    page_title="Andrei’s Resume Assistant",
+    page_icon="📄",
+    layout="centered"
+)
+
+# ✅ OpenAI API key from Streamlit Secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# Page layout
-st.title("🎯 AI Job Application Assistant")
-st.markdown("Paste your resume and a job description below. Get tailored resume bullets, a match score, and a personalized cover letter.")
+# 🔧 Function to extract text from PDF or DOCX
+def extract_text_from_file(uploaded_file):
+    if uploaded_file.name.endswith(".pdf"):
+        pdf = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+        text = ""
+        for page in pdf:
+            text += page.get_text()
+        return text
 
-# Inputs
-resume = st.text_area("📄 Paste Your Resume:", height=250)
-job_description = st.text_area("📝 Paste the Job Description:", height=250)
+    elif uploaded_file.name.endswith(".docx"):
+        doc = Document(uploaded_file)
+        return "\n".join([para.text for para in doc.paragraphs])
 
-# Main Action
-if st.button("🚀 Generate AI Suggestions"):
-    if not openai_api_key:
-        st.warning("⚠️ Please enter your OpenAI API key in the sidebar.")
-    elif not resume or not job_description:
-        st.warning("⚠️ Please paste both your resume and the job description.")
     else:
-        with st.spinner("🤖 Thinking..."):
-            openai.api_key = openai_api_key
+        return "❌ Unsupported file type"
 
+# ✅ UI Layout
+st.title("🎯 Andrei’s AI Job Application Assistant")
+st.markdown("""
+Welcome! Upload or paste your **resume** and a **job description** to receive:
+- A match score
+- Tailored resume bullet points
+- A custom cover letter
+""")
+
+# 🔄 Resume input
+st.subheader("📄 Resume")
+resume_input_method = st.radio("Choose input method for resume:", ["Upload File", "Paste Text"])
+
+resume_text = ""
+if resume_input_method == "Upload File":
+    uploaded_resume = st.file_uploader("Upload your resume (PDF or DOCX)", type=["pdf", "docx"], key="resume")
+    if uploaded_resume:
+        resume_text = extract_text_from_file(uploaded_resume)
+        st.success("✅ Resume uploaded successfully.")
+else:
+    resume_text = st.text_area("Paste your resume here:", height=250)
+
+# 🔄 Job description input
+st.subheader("📝 Job Description")
+job_input_method = st.radio("Choose input method for job description:", ["Upload File", "Paste Text"])
+
+job_description = ""
+if job_input_method == "Upload File":
+    uploaded_job = st.file_uploader("Upload job description (PDF or DOCX)", type=["pdf", "docx"], key="job")
+    if uploaded_job:
+        job_description = extract_text_from_file(uploaded_job)
+        st.success("✅ Job description uploaded successfully.")
+else:
+    job_description = st.text_area("Paste the job description here:", height=250)
+
+# 🚀 Generate AI response
+if st.button("Generate AI Suggestions"):
+    if not resume_text or not job_description:
+        st.warning("Please provide both resume and job description.")
+    else:
+        with st.spinner("Generating response..."):
             prompt = f"""
 You are an AI Job Application Assistant.
 
 Compare the resume and job description below.
 
 Resume:
-{resume}
+{resume_text}
 
 Job Description:
 {job_description}
@@ -70,8 +118,8 @@ Return in this JSON format:
                     st.text_area("Generated Cover Letter", result["custom_cover_letter"], height=300)
 
                 except json.JSONDecodeError:
-                    st.error("❌ Could not parse the response as JSON.")
-                    st.text(output)
+                    st.error("⚠️ Couldn't parse response as JSON. Here's the raw output:")
+                    st.code(output)
 
             except Exception as e:
-                st.error(f"Something went wrong: {e}")
+                st.error(f"❌ Something went wrong: {e}")
