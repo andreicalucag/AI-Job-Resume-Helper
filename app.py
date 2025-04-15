@@ -4,7 +4,7 @@ import json
 
 # Sidebar for API key
 st.sidebar.title("🔐 API Configuration")
-openai_api_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Page layout
 st.title("🎯 AI Job Application Assistant")
