@@ -3,7 +3,6 @@ import openai
 import json
 
 # Sidebar for API key
-st.sidebar.title("🔐 API Configuration")
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Page layout
