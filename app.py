@@ -1,18 +1,18 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 import fitz  # PyMuPDF
 from docx import Document
 import json
 
-# ✅ Streamlit page config
+# ✅ Set Streamlit page config
 st.set_page_config(
     page_title="Andrei’s Resume Assistant",
     page_icon="📄",
     layout="centered"
 )
 
-# ✅ OpenAI API key from Streamlit Secrets
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# ✅ Initialize OpenAI client
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # 🔧 Extract text from PDF or DOCX
 def extract_text_from_file(uploaded_file):
@@ -30,7 +30,7 @@ def extract_text_from_file(uploaded_file):
     else:
         return ""
 
-# ✅ UI layout
+# ✅ App layout
 st.title("🎯 Andrei’s AI Job Application Assistant")
 st.markdown("""
 Upload or paste your **resume** and a **job description** to receive:
@@ -39,7 +39,7 @@ Upload or paste your **resume** and a **job description** to receive:
 - A custom cover letter
 """)
 
-# 🔁 Resume Input
+# 🔁 Resume input
 st.subheader("📄 Resume")
 resume_input_method = st.radio("Choose input method for resume:", ["Upload File", "Paste Text"])
 resume_text = ""
@@ -53,7 +53,7 @@ if resume_input_method == "Upload File":
 else:
     resume_text = st.text_area("Paste your resume here:", height=250)
 
-# 🔁 Job Description Input
+# 🔁 Job description input
 st.subheader("📝 Job Description")
 job_input_method = st.radio("Choose input method for job description:", ["Upload File", "Paste Text"])
 job_description = ""
@@ -67,9 +67,8 @@ if job_input_method == "Upload File":
 else:
     job_description = st.text_area("Paste the job description here:", height=250)
 
-# 🚀 Generate AI Suggestions
+# 🚀 Generate button
 if st.button("Generate AI Suggestions"):
-    # 🔐 Input validation
     if resume_input_method == "Upload File" and not uploaded_resume:
         st.warning("Please upload your resume.")
     elif resume_input_method == "Paste Text" and not resume_text.strip():
@@ -105,13 +104,13 @@ Return in this JSON format:
 """
 
             try:
-                response = openai.ChatCompletion.create(
+                response = client.chat.completions.create(
                     model="gpt-4",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.7
                 )
 
-                output = response["choices"][0]["message"]["content"]
+                output = response.choices[0].message.content
 
                 try:
                     result = json.loads(output)
